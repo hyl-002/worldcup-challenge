@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>2026 世界盃：ICC 入球大挑戰!</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; 
+        }
+        
+        body {
+                    background-color: #1a1a1a;
+            background-image: linear-gradient(to bottom, #111, #222); /* 深色漸變底 */
+            color: white;
+            font-family: sans-serif;
+            text-align: center;
+        }
+        
+        /* 1. 外圍全畫面容器：加上打直高清背景圖 👇 */
+        #login-wrapper {
+            display: flex;
+            justify-content: center;
+            /* align-items 改為 flex-start 配合黐頂定位 */
+            align-items: flex-start; 
+            
+            position: fixed; /* 鎖定背景 */
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 100; /* 確保在遊戲畫布上方 */
+
+            /* 👉👉👉 【核心修正 1】：背景定位設置 👉👉👉 */
+            background-image: url('landing-bg.png'); /* 放入你張圖 */
+            
+            /* 👉 contain：確保圖片依照原比例「完整裝入」螢幕，不放大、不變形、不裁切 */
+            background-size: contain; 
+            
+            /* 防止重複 */
+            background-repeat: no-repeat;
+            
+            /* 👉 👉 👉 👉 黐頂！強制圖片頂端對齊螢幕頂端 👉 👉 👉 👉 */
+            background-position: top center; 
+            
+            /* 如果有空位，跌顏色用全局底色填充 */
+            background-color: #1a1a1a; 
+            
+            /* 移除舊 padding，改為配合圖片用 margin-top (喺 login-screen 度設) */
+        }
+
+        /* 2. 原本個黑 Box：而家唔需要黑底 */
+        #login-screen { 
+            background: transparent; 
+            padding: 0;
+            border-radius: 0;
+            max-width: 95%; /* 防止擠壓 */
+            width: 320px;
+            
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+
+            /* 👇 👇 👇 優化：使用 margin-top 配合你圖片預留嘅空白位 👇 👇 👇 */
+            /* 我用了一個 vh 單位，表示螢幕高度單位，例如 35% 螢幕高度
+               你可以自己微調呢個數 (例如 30vh, 40vh) 嚟配合圖入面嘅人同標題位 */
+            margin-top: 42vh; 
+        }
+        
+        /* 3. 輸入框優化大細：保持放大版 👇 👇 👇 */
+        input[type="text"] {
+            /* 魔法大細 (放大版) */
+            width: 280px;   /* 👉 闊 3px */
+            height: 68px;   /* 👉 高 60px */
+            font-size: 24px; /* 👉 字體加大到 24px */
+            
+            padding: 0 10px;
+            border-radius: 12px;
+            border: 3px solid white;
+            margin-bottom: 25px; /* 輸入框同按鈕之間嘅距離 */
+            text-align: center;
+            /* 半透明白底 */
+            background: rgba(255,255,255,1); 
+            box-shadow: 0 4px 10px rgba(0,0,0,1);
+            outline: none; 
+        }
+        
+        button {
+            padding: 12px 32px; /* 加大掣嘅大小 */
+            font-size: 22px;
+            background-color: #FFEB3B;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            color: black;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.1s ease;
+        }
+        button:hover { background-color: #FBC02D; transform: scale(1.05); }
+        button:active { transform: scale(0.98); }
+        
+        #game-screen { display: none; max-width: 500px; margin: 0 auto; padding: 20px;}
+        
+        #stats {
+            display: flex; justify-content: space-between; font-size: 20px;
+            margin-bottom: 10px; background: rgba(0,0,0,0.8); padding: 10px 15px; border-radius: 10px;
+        }
+        #level-display { color: #ff5252; font-size: 14px; margin-top: 5px;}
+        
+        canvas { 
+            border: 4px solid #fff; 
+            border-radius: 10px; 
+            cursor: crosshair; 
+            touch-action: none;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+        
+        #controls { margin-top: 15px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; }
+        input[type="range"] { width: 100%; margin-bottom: 5px; }
+        
+        #message-overlay {
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 50px; font-weight: bold; color: white; text-shadow: 3px 3px 10px black; pointer-events: none;
+        }
+
+        #end-screen {
+            display: none;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            border-radius: 10px;
+            flex-direction: column; justify-content: center; align-items: center;
+            z-index: 10;
+        }
+        #end-title { font-size: 35px; font-weight: bold; margin-bottom: 10px; color: #FFEB3B; }
+        #final-score { font-size: 24px; margin-bottom: 20px; }
+        #chances-left { font-size: 16px; color: #ccc; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div id="login-wrapper">
+        <div id="login-screen">
+            <input type="text" id="emp-id" placeholder="請輸入員工號碼"><br>
+            <button onclick="checkLogin()">開始挑戰</button>
+            <p id="login-error" style="color: #ff5252; display: none; background: rgba(0,0,0,0.7); padding: 5px; border-radius: 5px; margin-top: 10px;">你今日嘅 3 次機會已經用完啦，聽日請早！</p>
+        </div>
+    </div>
+
+    <div id="game-screen">
+        <div id="stats">
+            <span id="time-display">⏱️: 40s</span>
+            <div style="text-align: right;">
+                <div id="score-display">🏆 分數: 0</div>
+                <div id="level-display">守門員速度: Lv 1</div>
+            </div>
+        </div>
+        
+        <div style="position: relative;">
+            <canvas id="gameCanvas" width="400" height="550"></canvas>
+            <div id="message-overlay"></div>
+            
+            <div id="end-screen" style="display: none;">
+                <div id="end-title">Times Up!</div>
+                <div id="final-score">你嘅分數係: 0</div>
+                <div id="chances-left">今日剩餘機會: 2 次</div>
+                <div><button onclick="tryAgain()" id="retry-btn">再試一次 🔄</button></div>
+                <p id="exit-msg" style="font-size: 14px; color: #888; margin-top: 20px; display: none;">今日挑戰完畢，請關閉網頁離開 👋</p>
+            </div>
+        </div>
+
+        <div id="controls">
+            <p style="margin: 0 0 10px 0; font-size: 16px;">👇 左右拉動調整企位 👇</p>
+            <input type="range" id="pos-slider" min="50" max="350" value="200">
+            <p style="margin: 10px 0 0 0; font-size: 16px; color: #FFEB3B;">👆 避開人牆，點擊草地射門！ 👆</p>
+        </div>
+    </div>
+
+    <script>
+        const imgBall = new Image(); imgBall.src = 'ball.png';
+        const imgShooter = new Image(); imgShooter.src = 'shooter.png';
+        const imgGoalie = new Image(); imgGoalie.src = 'goalie.png';
+        const imgBlock = new Image(); imgBlock.src = 'block.png'; 
+
+        let empId = "";
+        let today = new Date().toDateString(); 
+        const MAX_PLAYS = 3; 
+        
+        function checkLogin() {
+            empId = document.getElementById("emp-id").value.trim();
+            if (empId === "") { alert("請輸入員工號碼！"); return; }
+            
+            let records = JSON.parse(localStorage.getItem("dailyRecords") || "{}");
+            if (!records[today]) records[today] = {}; 
+            
+            let playCount = records[today][empId] || 0; 
+
+            if (playCount >= MAX_PLAYS) {
+                document.getElementById("login-error").style.display = "block";
+            } else {
+                records[today][empId] = playCount + 1;
+                localStorage.setItem("dailyRecords", JSON.stringify(records));
+                
+                // 登入成功時，隱藏全畫面容器，遊戲畫面（#game-screen）會顯示
+                document.getElementById("login-wrapper").style.display = "none";
+                document.getElementById("game-screen").style.display = "block";
+                initGame();
+            }
+        }
+
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        
+        let gameTimer = 40;
+        let score = 0;
+        let gameInterval;
+        let animationId;
+        let isPlaying = false;
+
+        const goal = { x: 50, y: 30, width: 300, height: 40 }; 
+        let baseGoalieSpeed = 1.5;
+        let goalie = { x: 175, y: 35, width: 50, height: 50, speed: baseGoalieSpeed, targetX: 175 }; 
+        
+        // 保留 90x50 人牆比例
+        let defenders = [
+            { x: 100, y: 200, width: 90, height: 50, speed: 2, dir: 1 },
+            { x: 230, y: 280, width: 90, height: 50, speed: 3, dir: -1 }
+        ];
+
+        let ball = { x: 200, y: 460, radius: 15, vx: 0, vy: 0, isShot: false };
+        let target = { x: 200, y: 40 };
+        let shooterX = 200; 
+
+        document.getElementById("pos-slider").addEventListener("input", function(e) {
+            if (!ball.isShot) {
+                ball.x = parseInt(e.target.value);
+                shooterX = ball.x; 
+            }
+        });
+
+        canvas.addEventListener("mousedown", handleAimAndShoot);
+        canvas.addEventListener("touchstart", function(e) {
+            e.preventDefault();
+            handleAimAndShoot(e.changedTouches[0]);
+        }, {passive: false});
+
+        function handleAimAndShoot(event) {
+            if (ball.isShot || !isPlaying) return;
+            const rect = canvas.getBoundingClientRect();
+            
+            let tapX = event.clientX - rect.left;
+            let tapY = event.clientY - rect.top;
+
+            let dx = tapX - ball.x;
+            let dy = tapY - ball.y;
+
+            if (dy >= 0) { dy = -1; }
+
+            let ratio = (0 - ball.y) / dy;
+            let targetTopX = ball.x + (dx * ratio);
+
+            if (targetTopX < 0) targetTopX = 0;
+            if (targetTopX > canvas.width) targetTopX = canvas.width;
+
+            let finalDx = targetTopX - ball.x;
+            let finalDy = 0 - ball.y;
+            let distance = Math.sqrt(finalDx * finalDx + finalDy * finalDy);
+            
+            let speed = 14; 
+            ball.vx = (finalDx / distance) * speed;
+            ball.vy = (finalDy / distance) * speed;
+            ball.isShot = true;
+        }
+
+        function initGame() {
+            score = 0;
+            baseGoalieSpeed = 1.5;
+            gameTimer = 40; 
+            isPlaying = true;
+            document.getElementById("score-display").innerText = "🏆 分數: " + score;
+            document.getElementById("level-display").innerText = "守門員速度: Lv 1";
+            document.getElementById("time-display").innerText = "⏱️: " + gameTimer + "s";
+            
+            document.getElementById("pos-slider").disabled = false;
+
+            gameInterval = setInterval(() => {
+                gameTimer--;
+                document.getElementById("time-display").innerText = "⏱️: " + gameTimer + "s";
+                if (gameTimer <= 0) endGame();
+            }, 1000);
+
+            resetBall();
+            gameLoop();
+        }
+
+        function showMessage(text, color) {
+            let msg = document.getElementById("message-overlay");
+            msg.innerText = text;
+            msg.style.color = color;
+            setTimeout(() => { msg.innerText = ""; }, 1000);
+        }
+
+        function resetBall() {
+            ball.isShot = false;
+            ball.vx = 0;
+            ball.vy = 0;
+            ball.y = 460;
+            ball.x = parseInt(document.getElementById("pos-slider").value);
+            shooterX = ball.x; 
+        }
+
+        function update() {
+            if (!isPlaying) return;
+
+            for (let d of defenders) {
+                d.x += d.speed * d.dir;
+                if (d.x <= 0 || d.x + d.width >= canvas.width) { d.dir *= -1; }
+            }
+
+            let distToTarget = goalie.targetX - goalie.x;
+            if (Math.abs(distToTarget) < goalie.speed) {
+                goalie.targetX = goal.x + Math.random() * (goal.width - goalie.width);
+                goalie.speed = baseGoalieSpeed + Math.random() * 2; 
+            } else {
+                goalie.x += Math.sign(distToTarget) * goalie.speed;
+            }
+
+            if (ball.isShot) {
+                ball.x += ball.vx;
+                ball.y += ball.vy;
+
+                for (let d of defenders) {
+                    if (ball.y - ball.radius <= d.y + d.height && ball.y + ball.radius >= d.y &&
+                        ball.x + ball.radius >= d.x && ball.x - ball.radius <= d.x + d.width) {
+                        showMessage("Blocked!", "#FF9800"); 
+                        resetBall();
+                        return;
+                    }
+                }
+
+                if (ball.y - ball.radius <= goalie.y + goalie.height && ball.y + ball.radius >= goalie.y &&
+                    ball.x + ball.radius >= goalie.x && ball.x - ball.radius <= goalie.x + goalie.width) {
+                    showMessage("Saved!", "#ff5252");
+                    resetBall();
+                    return;
+                }
+
+                if (ball.y <= goal.y + goal.height) {
+                    if (ball.x >= goal.x && ball.x <= goal.x + goal.width) {
+                        showMessage("Goal!!!", "#4CAF50");
+                        score++;
+                        baseGoalieSpeed += 0.5;
+                        let currentLevel = Math.floor((baseGoalieSpeed - 1.5) / 0.5) + 1;
+                        document.getElementById("score-display").innerText = "🏆 分數: " + score;
+                        document.getElementById("level-display").innerText = "守門員速度: Lv " + currentLevel;
+                    } else {
+                        showMessage("You missed!", "#ff5252");
+                    }
+                    resetBall();
+                }
+
+                if (ball.x < 0 || ball.x > canvas.width || ball.y < 0) {
+                    showMessage("You missed!", "#ff5252");
+                    resetBall();
+                }
+            }
+        }
+
+        function draw() {
+            // 畫靚靚漸變草地 (已還原 JS 漸變)
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, "#2E7D32");
+            gradient.addColorStop(1, "#1B5E20");
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(goal.x - 30, goal.y, goal.width + 60, 150);
+            ctx.beginPath();
+            ctx.arc(canvas.width/2, goal.y + 150, 60, 0, Math.PI, false);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.lineWidth = 1;
+            for(let i = goal.x; i <= goal.x + goal.width; i += 15) { ctx.moveTo(i, goal.y); ctx.lineTo(i, goal.y + goal.height); }
+            for(let i = goal.y; i <= goal.y + goal.height; i += 15) { ctx.moveTo(goal.x, i); ctx.lineTo(goal.x + goal.width, i); }
+            ctx.stroke();
+            ctx.strokeStyle = "white";
+            ctx.lineWidth = 6;
+            ctx.strokeRect(goal.x, goal.y, goal.width, goal.height);
+
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            for (let d of defenders) {
+                if (imgBlock.complete && imgBlock.naturalWidth !== 0) {
+                    ctx.drawImage(imgBlock, d.x, d.y, d.width, d.height);
+                } else {
+                    ctx.fillStyle = "#FF9800"; 
+                    ctx.fillRect(d.x, d.y, d.width, d.height);
+                    
+                    ctx.fillStyle = "black";
+                    ctx.font = "25px sans-serif";
+                    ctx.fillText("🧍‍♂️🧍‍♂️", d.x + d.width/2, d.y + d.height/2); 
+                }
+            }
+
+            if (imgGoalie.complete && imgGoalie.naturalWidth !== 0) {
+                ctx.drawImage(imgGoalie, goalie.x, goalie.y, goalie.width, goalie.height);
+            } else {
+                ctx.fillStyle = "white"; 
+                ctx.font = "40px sans-serif";
+                ctx.fillText("🦸‍♂️", goalie.x + goalie.width/2, goalie.y + goalie.height/2);
+            }
+
+            if (imgShooter.complete && imgShooter.naturalWidth !== 0) {
+                ctx.drawImage(imgShooter, shooterX - 25, 460 + 20, 50, 60);
+            } else {
+                ctx.fillStyle = "white"; 
+                ctx.font = "45px sans-serif";
+                ctx.fillText("🏃‍♂️", shooterX, 460 + 45); 
+            }
+
+            if (imgBall.complete && imgBall.naturalWidth !== 0) {
+                ctx.drawImage(imgBall, ball.x - ball.radius, ball.y - ball.radius, ball.radius * 2, ball.radius * 2);
+            } else {
+                ctx.fillStyle = "white";
+                ctx.font = "24px sans-serif";
+                ctx.fillText("⚽", ball.x, ball.y);
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            if (isPlaying) { animationId = requestAnimationFrame(gameLoop); }
+        }
+
+        function endGame() {
+            isPlaying = false;
+            clearInterval(gameInterval);
+            document.getElementById("pos-slider").disabled = true;
+
+            let records = JSON.parse(localStorage.getItem("dailyRecords") || "{}");
+            let playCount = records[today][empId] || 0;
+            let chancesLeft = MAX_PLAYS - playCount;
+
+            document.getElementById("final-score").innerText = "你嘅分數係: " + score;
+            let chancesText = document.getElementById("chances-left");
+            let retryBtn = document.getElementById("retry-btn");
+            let exitMsg = document.getElementById("exit-msg");
+            
+            if (chancesLeft > 0) {
+                chancesText.innerText = `今日剩餘機會: ${chancesLeft} 次`;
+                chancesText.style.color = "#4CAF50"; 
+                retryBtn.style.display = "inline-block";
+                if(exitMsg) exitMsg.style.display = "none";
+            } else {
+                chancesText.innerText = "今日 3 次機會已用完！";
+                chancesText.style.color = "#ff5252"; 
+                retryBtn.style.display = "none"; 
+                if(exitMsg) exitMsg.style.display = "block";
+            }
+
+            document.getElementById("end-screen").style.display = "flex";
+
+            let gameData = { staffId: empId, score: score };
+            // ⚠️ 記得改返你自己嘅 Google Sheets 網址！
+            const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzk0uSM-fh9nWZFnvJNwz8PmyupcIzZQPLc4Z3nJCQxoXM2dnnZg_tbzY9MeYxg_BOt/exec";
+
+            fetch(GOOGLE_SHEET_URL, {
+                method: "POST", mode: "no-cors", 
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(gameData)
+            }).then(() => { console.log("資料已發送！"); }).catch(error => { console.error("發送失敗：", error); });
+        }
+    </script>
+</body>
+</html>
