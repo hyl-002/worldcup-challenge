@@ -186,7 +186,7 @@
         let today = new Date().toDateString(); 
         const MAX_PLAYS = 3; 
         
-        function checkLogin() {
+                function checkLogin() {
             empId = document.getElementById("emp-id").value.trim();
             if (empId === "") { alert("請輸入員工號碼！"); return; }
             
@@ -201,15 +201,33 @@
                 records[today][empId] = playCount + 1;
                 localStorage.setItem("dailyRecords", JSON.stringify(records));
                 
-                // 登入成功時，隱藏全畫面容器，遊戲畫面（#game-screen）會顯示
                 document.getElementById("login-wrapper").style.display = "none";
                 document.getElementById("game-screen").style.display = "block";
                 initGame();
             }
         }
 
+        // 👇👇👇 請將呢段 tryAgain 加返落呢個位 👇👇👇
+        function tryAgain() {
+            let records = JSON.parse(localStorage.getItem("dailyRecords") || "{}");
+            let playCount = records[today][empId] || 0;
+
+            if (playCount >= MAX_PLAYS) {
+                alert("你今日嘅 3 次機會已經用完啦，辛苦晒！");
+                location.reload(); 
+            } else {
+                records[today][empId] = playCount + 1;
+                localStorage.setItem("dailyRecords", JSON.stringify(records));
+                
+                document.getElementById("end-screen").style.display = "none";
+                initGame();
+            }
+        }
+        // 👆👆👆 加完呢段就搞掂 👆👆👆
+
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
+
         
         let gameTimer = 40;
         let score = 0;
