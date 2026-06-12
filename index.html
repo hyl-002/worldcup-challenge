@@ -390,7 +390,19 @@
 
         const goal = { x: 50, y: 30, width: 300, height: 40 }; 
         let baseGoalieSpeed = 1.5;
-        let goalie = { x: 175, y: 35, width: 50, height: 50, speed: baseGoalieSpeed, targetX: 175 }; 
+let goalie = {
+    x: 175,
+    y: 35,
+    width: 70,
+    height: 70,
+    speed: baseGoalieSpeed,
+    targetX: 175
+};
+
+imgGoalie.onload = function () {
+    goalie.height = goalie.width *
+        (imgGoalie.naturalHeight / imgGoalie.naturalWidth);
+};
         
         // 保留 90x50 人牆比例
         let defenders = [
