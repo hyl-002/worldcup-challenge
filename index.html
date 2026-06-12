@@ -322,8 +322,8 @@
         </div>
 
         <div id="controls">
-            <p>👇 直接按住球員左右拖動企位 👇</p>
-            <p>👆 放手後不會射門；點擊草地先會射門！ 👆</p>
+            <p>👇 一隻手按住球員左右拖動企位 👇</p>
+            <p>👆 另一隻手可同時點擊草地射門！ 👆</p>
         </div>
     </div>
 
@@ -414,10 +414,10 @@ let goalie = {
         let target = { x: 200, y: 40 };
         let shooterX = 200; 
 
-        let pointerDown = false;
-        let draggingShooter = false;
-        let movedDuringPointer = false;
-        let pointerStart = { x: 0, y: 0 };
+        // 多點觸控設定：
+        // dragPointerId 負責記住「拖動球員」嗰隻手指；
+        // 另一隻手指點擊草地時，可以即時射門。
+        let dragPointerId = null;
         const DRAG_THRESHOLD = 8;
 
         function getCanvasPoint(event) {
@@ -445,65 +445,51 @@ let goalie = {
             if (!isPlaying || ball.isShot) return;
 
             const point = getCanvasPoint(event);
-            pointerDown = true;
-            movedDuringPointer = false;
-            pointerStart = point;
 
-            if (isTouchingShooter(point)) {
-                draggingShooter = true;
-                canvas.setPointerCapture(event.pointerId);
-                shooterX = clampShooterX(point.x);
-                ball.x = shooterX;
-            } else {
-                draggingShooter = false;
-            }
-        });
-
-        canvas.addEventListener("pointermove", function(event) {
-            if (!pointerDown || !isPlaying || ball.isShot) return;
-
-            const point = getCanvasPoint(event);
-            const moveDistance = Math.hypot(point.x - pointerStart.x, point.y - pointerStart.y);
-            if (moveDistance > DRAG_THRESHOLD) movedDuringPointer = true;
-
-            if (draggingShooter) {
+            // 第一隻按住球員/足球附近嘅手指：用嚟左右拖動企位，不會射門。
+            if (isTouchingShooter(point) && dragPointerId === null) {
                 event.preventDefault();
+                dragPointerId = event.pointerId;
+
+                try {
+                    canvas.setPointerCapture(event.pointerId);
+                } catch (e) {}
+
                 shooterX = clampShooterX(point.x);
                 ball.x = shooterX;
+                return;
+            }
+
+            // 另一隻手指點擊草地：即時射門。
+            // 因為只有「非球員區」先會射，所以拖動球員時唔會誤觸射球。
+            if (!isTouchingShooter(point)) {
+                shootAt(point.x, point.y);
             }
         }, { passive: false });
 
-        canvas.addEventListener("pointerup", function(event) {
-            if (!pointerDown || !isPlaying || ball.isShot) {
-                pointerDown = false;
-                draggingShooter = false;
-                return;
-            }
+        canvas.addEventListener("pointermove", function(event) {
+            if (!isPlaying || ball.isShot) return;
+            if (event.pointerId !== dragPointerId) return;
 
+            event.preventDefault();
             const point = getCanvasPoint(event);
+            shooterX = clampShooterX(point.x);
+            ball.x = shooterX;
+        }, { passive: false });
 
-            // 如果係拖動球員，放手只會完成移位，絕對唔會射門。
-            if (draggingShooter) {
-                pointerDown = false;
-                draggingShooter = false;
-                movedDuringPointer = false;
-                return;
+        canvas.addEventListener("pointerup", function(event) {
+            if (event.pointerId === dragPointerId) {
+                try {
+                    canvas.releasePointerCapture(event.pointerId);
+                } catch (e) {}
+                dragPointerId = null;
             }
-
-            // 如果手指有明顯移動，當作誤觸／滑動，不射門。
-            if (!movedDuringPointer) {
-                shootAt(point.x, point.y);
-            }
-
-            pointerDown = false;
-            draggingShooter = false;
-            movedDuringPointer = false;
         });
 
-        canvas.addEventListener("pointercancel", function() {
-            pointerDown = false;
-            draggingShooter = false;
-            movedDuringPointer = false;
+        canvas.addEventListener("pointercancel", function(event) {
+            if (event.pointerId === dragPointerId) {
+                dragPointerId = null;
+            }
         });
 
         function shootAt(tapX, tapY) {
@@ -542,9 +528,7 @@ let goalie = {
             document.getElementById("level-display").innerText = "守門員速度: Lv 1";
             document.getElementById("time-display").innerText = "⏱️: " + gameTimer + "s";
             
-            pointerDown = false;
-            draggingShooter = false;
-            movedDuringPointer = false;
+            dragPointerId = null;
 
             gameInterval = setInterval(() => {
                 gameTimer--;
@@ -716,9 +700,7 @@ let goalie = {
             isPlaying = false;
             clearInterval(gameInterval);
             cancelAnimationFrame(animationId);
-            pointerDown = false;
-            draggingShooter = false;
-            movedDuringPointer = false;
+            dragPointerId = null;
 
             let records = JSON.parse(localStorage.getItem("dailyRecords") || "{}");
             let playCount = records[today][empId] || 0;
