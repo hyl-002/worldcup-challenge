@@ -391,24 +391,29 @@
         const goal = { x: 50, y: 30, width: 300, height: 40 }; 
         let baseGoalieSpeed = 1.5;
 let goalie = {
-    x: 175,
-    y: 35,
-    width: 70,
-    height: 70,
+    x: 165,
+    y: 28,
+    width: 75,
+    height: 75,
     speed: baseGoalieSpeed,
-    targetX: 175
+    targetX: 165
 };
 
 imgGoalie.onload = function () {
-    goalie.height = goalie.width *
-        (imgGoalie.naturalHeight / imgGoalie.naturalWidth);
+    goalie.height = goalie.width * (imgGoalie.naturalHeight / imgGoalie.naturalWidth);
 };
         
         // 保留 90x50 人牆比例
         let defenders = [
-            { x: 100, y: 200, width: 90, height: 50, speed: 2, dir: 1 },
-            { x: 230, y: 280, width: 90, height: 50, speed: 3, dir: -1 }
-        ];
+    { x: 95, y: 205, width: 70, height: 45, speed: 2, dir: 1 },
+    { x: 235, y: 285, width: 70, height: 45, speed: 3, dir: -1 }
+];
+
+imgBlock.onload = function () {
+    for (let d of defenders) {
+        d.height = d.width * (imgBlock.naturalHeight / imgBlock.naturalWidth);
+    }
+};
 
         let ball = { x: 200, y: 460, radius: 15, vx: 0, vy: 0, isShot: false };
         let target = { x: 200, y: 40 };
