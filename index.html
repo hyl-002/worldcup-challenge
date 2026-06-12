@@ -14,7 +14,7 @@
         
         body {
             background-color: #1a1a1a;
-            /* 👇 遊戲畫面背景：加返你原本嘅 bg.jpg 👇 */
+            /* gameplay 外圍背景：bg.jpg */
             background-image: url('bg.jpg'), linear-gradient(to bottom, #111, #333);
             background-size: cover;
             background-position: center;
@@ -88,7 +88,13 @@
         button:hover { background-color: #FBC02D; transform: scale(1.05); }
         button:active { transform: scale(0.98); }
         
-        #game-screen { display: none; max-width: 500px; margin: 0 auto; padding: 20px;}
+        #game-screen {
+            display: none;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
         
         #stats {
             display: flex; justify-content: space-between; font-size: 20px;
@@ -102,9 +108,12 @@
             cursor: crosshair; 
             touch-action: none;
             box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-            background-color: transparent;
-            max-width: 100%;
+            width: 100%;
+            max-width: 400px;
             height: auto;
+            display: block;
+            margin: 0 auto;
+            background: transparent;
         }
         
         #controls { margin-top: 15px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; }
@@ -168,7 +177,8 @@
     </div>
 
     <script>
-        const imgGameBg = new Image(); imgGameBg.src = 'bg.jpg';
+        // 頁面背景用 bg.jpg；球場 Canvas 背景用 field.jpg
+        const imgField = new Image(); imgField.src = 'field.jpg';
         const imgBall = new Image(); imgBall.src = 'ball.png';
         const imgShooter = new Image(); imgShooter.src = 'shooter.png';
         const imgGoalie = new Image(); imgGoalie.src = 'goalie.png';
@@ -257,8 +267,9 @@
             if (ball.isShot || !isPlaying) return;
             const rect = canvas.getBoundingClientRect();
             
-            let tapX = event.clientX - rect.left;
-            let tapY = event.clientY - rect.top;
+            // 支援手機 responsive canvas：將畫面座標轉回 canvas 內部 400x550 座標
+            let tapX = (event.clientX - rect.left) * (canvas.width / rect.width);
+            let tapY = (event.clientY - rect.top) * (canvas.height / rect.height);
 
             let dx = tapX - ball.x;
             let dy = tapY - ball.y;
@@ -282,7 +293,6 @@
         }
 
         function initGame() {
-            // 避免「再試一次」時累積多個 timer / animation loop
             clearInterval(gameInterval);
             cancelAnimationFrame(animationId);
 
@@ -290,21 +300,9 @@
             baseGoalieSpeed = 1.5;
             gameTimer = 40; 
             isPlaying = true;
-
-            // 重設守門員及人牆位置，令每局更穩定
-            goalie.x = 175;
-            goalie.y = 35;
-            goalie.speed = baseGoalieSpeed;
-            goalie.targetX = 175;
-            defenders = [
-                { x: 100, y: 200, width: 90, height: 50, speed: 2, dir: 1 },
-                { x: 230, y: 280, width: 90, height: 50, speed: 3, dir: -1 }
-            ];
-
             document.getElementById("score-display").innerText = "🏆 分數: " + score;
             document.getElementById("level-display").innerText = "守門員速度: Lv 1";
             document.getElementById("time-display").innerText = "⏱️: " + gameTimer + "s";
-            document.getElementById("message-overlay").innerText = "";
             
             document.getElementById("pos-slider").disabled = false;
 
@@ -392,10 +390,10 @@
         }
 
         function draw() {
-            // 重要修正：遊戲畫面係 canvas，body 背景會被 canvas 遮住，
-            // 所以要直接將 bg.jpg 畫入 canvas 入面。
-            if (imgGameBg.complete && imgGameBg.naturalWidth !== 0) {
-                ctx.drawImage(imgGameBg, 0, 0, canvas.width, canvas.height);
+            // Canvas 內嘅球場背景：使用 field.jpg
+            // 注意：bg.jpg 係 body / gameplay 外圍背景；field.jpg 先係球場畫布背景
+            if (imgField.complete && imgField.naturalWidth !== 0) {
+                ctx.drawImage(imgField, 0, 0, canvas.width, canvas.height);
             } else {
                 const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
                 gradient.addColorStop(0, "#2E7D32");
@@ -403,21 +401,10 @@
                 ctx.fillStyle = gradient;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
-            
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
-            ctx.lineWidth = 3;
-            ctx.strokeRect(goal.x - 30, goal.y, goal.width + 60, 150);
-            ctx.beginPath();
-            ctx.arc(canvas.width/2, goal.y + 150, 60, 0, Math.PI, false);
-            ctx.stroke();
 
-            ctx.beginPath();
-            ctx.lineWidth = 1;
-            for(let i = goal.x; i <= goal.x + goal.width; i += 15) { ctx.moveTo(i, goal.y); ctx.lineTo(i, goal.y + goal.height); }
-            for(let i = goal.y; i <= goal.y + goal.height; i += 15) { ctx.moveTo(goal.x, i); ctx.lineTo(goal.x + goal.width, i); }
-            ctx.stroke();
-            ctx.strokeStyle = "white";
-            ctx.lineWidth = 6;
+            // 保留一個簡潔嘅射門目標區，避免 field.jpg 本身太乾淨而玩家唔知射邊度
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+            ctx.lineWidth = 5;
             ctx.strokeRect(goal.x, goal.y, goal.width, goal.height);
 
             ctx.textAlign = "center";
@@ -468,7 +455,6 @@
         }
 
         function endGame() {
-            if (!isPlaying) return;
             isPlaying = false;
             clearInterval(gameInterval);
             cancelAnimationFrame(animationId);
