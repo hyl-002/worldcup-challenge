@@ -90,45 +90,80 @@
         
         #game-screen {
             display: none;
+            width: 100%;
             max-width: 500px;
+            height: 100dvh;
             margin: 0 auto;
-            padding: 20px;
+            padding: 10px 16px calc(8px + env(safe-area-inset-bottom));
             box-sizing: border-box;
+            flex-direction: column;
+            overflow: hidden;
         }
         
+        /* HUD 圖片背景：請將 hud.png 放在 index.html 同一個資料夾 */
         #stats {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            min-height: 76px;
+            margin-bottom: 8px;
+            padding: 12px 46px;
+            box-sizing: border-box;
+            color: #fff;
 
-    font-size: 20px;
-    margin-bottom: 10px;
+            background-color: rgba(2, 10, 28, 0.92); /* hud.png 未載入時的後備底色 */
+            background-image: url('hud.png');
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            background-position: center;
 
-    /* 使用 hud.png */
-    background-image: url('hud.png');
-    background-size: 100% 100%;
-    background-repeat: no-repeat;
-    background-position: center;
+            border-radius: 20px;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+        }
 
-    background-color: transparent;
+        #time-display,
+        #score-display,
+        #level-display {
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+            white-space: nowrap;
+        }
 
-    /* 調整高度 */
-    min-height: 90px;
+        #time-display {
+            font-size: 22px;
+            font-weight: 800;
+        }
 
-    /* 左右留位避免貼近裝飾 */
-    padding: 18px 35px;
+        #score-display {
+            font-size: 22px;
+            font-weight: 800;
+        }
 
-    border-radius: 25px;
+        #level-display {
+            color: #ff6b6b;
+            font-size: 15px;
+            margin-top: 5px;
+            font-weight: 800;
+        }
 
-    /* 移除原本黑底 */
-    box-shadow: none;
-}
-#level-display {
-    color: #ff6b6b;
-    font-size: 16px;
-    margin-top: 8px;
-    font-weight: bold;
-}
+        #stats > div {
+            position: relative;
+            z-index: 1;
+        }
+
+        #game-area {
+            position: relative;
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
         
         canvas { 
             border: 4px solid #fff; 
@@ -136,20 +171,109 @@
             cursor: crosshair; 
             touch-action: none;
             box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-            width: 100%;
-            max-width: 400px;
-            height: auto;
             display: block;
-            margin: 0 auto;
             background: transparent;
+
+            width: auto;
+            height: 100%;
+            max-width: 100%;
+            max-height: 550px;
+            aspect-ratio: 400 / 550;
+            box-sizing: border-box;
         }
         
-        #controls { margin-top: 15px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; }
-        input[type="range"] { width: 100%; margin-bottom: 5px; }
+        #controls {
+            flex-shrink: 0;
+            margin-top: 8px;
+            background: rgba(0,0,0,0.82);
+            padding: 10px 14px;
+            border-radius: 14px;
+            box-sizing: border-box;
+        }
+
+        #controls p {
+            margin: 0;
+            line-height: 1.25;
+        }
+
+        #controls p:first-child {
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        #controls p:last-child {
+            margin-top: 8px;
+            font-size: 15px;
+            color: #FFEB3B;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 0;
+        }
         
         #message-overlay {
             position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
             font-size: 50px; font-weight: bold; color: white; text-shadow: 3px 3px 10px black; pointer-events: none;
+        }
+
+        @media (max-width: 430px) {
+            #game-screen {
+                padding: 8px 16px calc(6px + env(safe-area-inset-bottom));
+            }
+
+            #stats {
+                min-height: 72px;
+                margin-bottom: 7px;
+                padding: 10px 40px;
+                border-radius: 18px;
+            }
+
+            #time-display,
+            #score-display {
+                font-size: 20px;
+            }
+
+            #level-display {
+                font-size: 14px;
+                margin-top: 4px;
+            }
+
+            #controls {
+                margin-top: 7px;
+                padding: 9px 12px;
+            }
+
+            #controls p:first-child,
+            #controls p:last-child {
+                font-size: 14px;
+            }
+        }
+
+        @media (max-height: 720px) {
+            #stats {
+                min-height: 64px;
+                padding-top: 8px;
+                padding-bottom: 8px;
+            }
+
+            #time-display,
+            #score-display {
+                font-size: 18px;
+            }
+
+            #level-display {
+                font-size: 13px;
+            }
+
+            #controls {
+                padding: 7px 12px;
+            }
+
+            #controls p:first-child,
+            #controls p:last-child {
+                font-size: 13px;
+            }
         }
 
         #end-screen {
@@ -184,7 +308,7 @@
             </div>
         </div>
         
-        <div style="position: relative;">
+        <div id="game-area">
             <canvas id="gameCanvas" width="400" height="550"></canvas>
             <div id="message-overlay"></div>
             
@@ -198,9 +322,9 @@
         </div>
 
         <div id="controls">
-            <p style="margin: 0 0 10px 0; font-size: 16px;">👇 左右拉動調整企位 👇</p>
+            <p>👇 左右拉動調整企位 👇</p>
             <input type="range" id="pos-slider" min="50" max="350" value="200">
-            <p style="margin: 10px 0 0 0; font-size: 16px; color: #FFEB3B;">👆 避開人牆，點擊草地射門！ 👆</p>
+            <p>👆 避開人牆，點擊草地射門！ 👆</p>
         </div>
     </div>
 
@@ -233,7 +357,7 @@
                 
                 // 登入成功時，隱藏全畫面容器，遊戲畫面（#game-screen）會顯示
                 document.getElementById("login-wrapper").style.display = "none";
-                document.getElementById("game-screen").style.display = "block";
+                document.getElementById("game-screen").style.display = "flex";
                 initGame();
             }
         }
