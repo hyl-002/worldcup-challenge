@@ -407,9 +407,9 @@ let goalie = {
         
         // 人牆尺寸縮細；不用 imgBlock.onload 自動改高度，避免因圖片外圍留白而顯示比例失控
         let defenders = [
-    { x: 95, y: 205, width: 58, height: 58, speed: 2, dir: 1 },
-    { x: 235, y: 285, width: 58, height: 58, speed: 3, dir: -1 }
-];
+            { x: 95, y: 205, width: BLOCK_W, height: BLOCK_H, speed: 2, dir: 1 },
+            { x: 235, y: 285, width: BLOCK_W, height: BLOCK_H, speed: 3, dir: -1 }
+        ];
 
         let ball = { x: 200, y: 460, radius: 15, vx: 0, vy: 0, isShot: false };
         let target = { x: 200, y: 40 };
@@ -594,20 +594,16 @@ let goalie = {
             ctx.textBaseline = "middle";
 
             for (let d of defenders) {
-    ctx.drawImage(
-        imgBlock,
-        d.x,
-        d.y,
-        d.width,
-        d.height
-    );
+                if (imgBlock.complete && imgBlock.naturalWidth !== 0) {
+                    // Block 圖唔再用 drawAsset 裁切，避免 cut 頭；只按指定框縮放。
+                    ctx.drawImage(imgBlock, d.x, d.y, d.width, d.height);
                 } else {
-                    ctx.fillStyle = "#FF9800"; 
+                    ctx.fillStyle = "#FF9800";
                     ctx.fillRect(d.x, d.y, d.width, d.height);
-                    
+
                     ctx.fillStyle = "black";
                     ctx.font = "25px sans-serif";
-                    ctx.fillText("🧍‍♂️🧍‍♂️", d.x + d.width/2, d.y + d.height/2); 
+                    ctx.fillText("🧍‍♂️🧍‍♂️", d.x + d.width/2, d.y + d.height/2);
                 }
             }
 
