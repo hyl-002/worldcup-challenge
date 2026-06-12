@@ -202,7 +202,7 @@
         }
 
         #controls p:last-child {
-            margin-top: 8px;
+            margin-top: 0;
             font-size: 15px;
             color: #FFEB3B;
         }
@@ -322,9 +322,8 @@
         </div>
 
         <div id="controls">
-            <p>👇 左右拉動調整企位 👇</p>
-            <input type="range" id="pos-slider" min="50" max="350" value="200">
-            <p>👆 避開人牆，點擊草地射門！ 👆</p>
+            <p>👇 直接按住球員左右拖動企位 👇</p>
+            <p>👆 放手後不會射門；點擊草地先會射門！ 👆</p>
         </div>
     </div>
 
@@ -411,30 +410,104 @@ let goalie = {
             { x: 235, y: 285, width: BLOCK_W, height: BLOCK_H, speed: 3, dir: -1 }
         ];
 
-        let ball = { x: 200, y: 460, radius: 12, vx: 0, vy: 0, isShot: false };
+        let ball = { x: 200, y: 460, radius: 15, vx: 0, vy: 0, isShot: false };
         let target = { x: 200, y: 40 };
         let shooterX = 200; 
 
-        document.getElementById("pos-slider").addEventListener("input", function(e) {
-            if (!ball.isShot) {
-                ball.x = parseInt(e.target.value);
-                shooterX = ball.x; 
+        let pointerDown = false;
+        let draggingShooter = false;
+        let movedDuringPointer = false;
+        let pointerStart = { x: 0, y: 0 };
+        const DRAG_THRESHOLD = 8;
+
+        function getCanvasPoint(event) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: (event.clientX - rect.left) * (canvas.width / rect.width),
+                y: (event.clientY - rect.top) * (canvas.height / rect.height)
+            };
+        }
+
+        function clampShooterX(x) {
+            return Math.max(50, Math.min(350, x));
+        }
+
+        function isTouchingShooter(point) {
+            // 擴大可拖動範圍，玩家按球員、足球附近或底部區域都可以拖。
+            return (
+                Math.abs(point.x - shooterX) <= 55 &&
+                point.y >= 405 &&
+                point.y <= 535
+            );
+        }
+
+        canvas.addEventListener("pointerdown", function(event) {
+            if (!isPlaying || ball.isShot) return;
+
+            const point = getCanvasPoint(event);
+            pointerDown = true;
+            movedDuringPointer = false;
+            pointerStart = point;
+
+            if (isTouchingShooter(point)) {
+                draggingShooter = true;
+                canvas.setPointerCapture(event.pointerId);
+                shooterX = clampShooterX(point.x);
+                ball.x = shooterX;
+            } else {
+                draggingShooter = false;
             }
         });
 
-        canvas.addEventListener("mousedown", handleAimAndShoot);
-        canvas.addEventListener("touchstart", function(e) {
-            e.preventDefault();
-            handleAimAndShoot(e.changedTouches[0]);
-        }, {passive: false});
+        canvas.addEventListener("pointermove", function(event) {
+            if (!pointerDown || !isPlaying || ball.isShot) return;
 
-        function handleAimAndShoot(event) {
+            const point = getCanvasPoint(event);
+            const moveDistance = Math.hypot(point.x - pointerStart.x, point.y - pointerStart.y);
+            if (moveDistance > DRAG_THRESHOLD) movedDuringPointer = true;
+
+            if (draggingShooter) {
+                event.preventDefault();
+                shooterX = clampShooterX(point.x);
+                ball.x = shooterX;
+            }
+        }, { passive: false });
+
+        canvas.addEventListener("pointerup", function(event) {
+            if (!pointerDown || !isPlaying || ball.isShot) {
+                pointerDown = false;
+                draggingShooter = false;
+                return;
+            }
+
+            const point = getCanvasPoint(event);
+
+            // 如果係拖動球員，放手只會完成移位，絕對唔會射門。
+            if (draggingShooter) {
+                pointerDown = false;
+                draggingShooter = false;
+                movedDuringPointer = false;
+                return;
+            }
+
+            // 如果手指有明顯移動，當作誤觸／滑動，不射門。
+            if (!movedDuringPointer) {
+                shootAt(point.x, point.y);
+            }
+
+            pointerDown = false;
+            draggingShooter = false;
+            movedDuringPointer = false;
+        });
+
+        canvas.addEventListener("pointercancel", function() {
+            pointerDown = false;
+            draggingShooter = false;
+            movedDuringPointer = false;
+        });
+
+        function shootAt(tapX, tapY) {
             if (ball.isShot || !isPlaying) return;
-            const rect = canvas.getBoundingClientRect();
-            
-            // 支援手機 responsive canvas：將畫面座標轉回 canvas 內部 400x550 座標
-            let tapX = (event.clientX - rect.left) * (canvas.width / rect.width);
-            let tapY = (event.clientY - rect.top) * (canvas.height / rect.height);
 
             let dx = tapX - ball.x;
             let dy = tapY - ball.y;
@@ -469,7 +542,9 @@ let goalie = {
             document.getElementById("level-display").innerText = "守門員速度: Lv 1";
             document.getElementById("time-display").innerText = "⏱️: " + gameTimer + "s";
             
-            document.getElementById("pos-slider").disabled = false;
+            pointerDown = false;
+            draggingShooter = false;
+            movedDuringPointer = false;
 
             gameInterval = setInterval(() => {
                 gameTimer--;
@@ -493,8 +568,7 @@ let goalie = {
             ball.vx = 0;
             ball.vy = 0;
             ball.y = 460;
-            ball.x = parseInt(document.getElementById("pos-slider").value);
-            shooterX = ball.x; 
+            ball.x = shooterX; 
         }
 
         function update() {
@@ -642,7 +716,9 @@ let goalie = {
             isPlaying = false;
             clearInterval(gameInterval);
             cancelAnimationFrame(animationId);
-            document.getElementById("pos-slider").disabled = true;
+            pointerDown = false;
+            draggingShooter = false;
+            movedDuringPointer = false;
 
             let records = JSON.parse(localStorage.getItem("dailyRecords") || "{}");
             let playCount = records[today][empId] || 0;
