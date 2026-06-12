@@ -390,30 +390,26 @@
 
         const goal = { x: 50, y: 30, width: 300, height: 40 }; 
         let baseGoalieSpeed = 1.5;
-let goalie = {
-    x: 165,
-    y: 28,
-    width: 75,
-    height: 75,
-    speed: baseGoalieSpeed,
-    targetX: 165
-};
+// 圖像大小設定：直接用 game 內部 canvas 座標控制，避免新 PNG 被自動比例壓細
+const GOALIE_W = 95;
+const GOALIE_H = 70;
+const BLOCK_W = 58;
+const BLOCK_H = 42;
 
-imgGoalie.onload = function () {
-    goalie.height = goalie.width * (imgGoalie.naturalHeight / imgGoalie.naturalWidth);
+let goalie = {
+    x: 200 - GOALIE_W / 2,
+    y: 22,
+    width: GOALIE_W,
+    height: GOALIE_H,
+    speed: baseGoalieSpeed,
+    targetX: 200 - GOALIE_W / 2
 };
         
-        // 保留 90x50 人牆比例
+        // 人牆尺寸縮細；不用 imgBlock.onload 自動改高度，避免因圖片外圍留白而顯示比例失控
         let defenders = [
-    { x: 95, y: 205, width: 70, height: 45, speed: 2, dir: 1 },
-    { x: 235, y: 285, width: 70, height: 45, speed: 3, dir: -1 }
-];
-
-imgBlock.onload = function () {
-    for (let d of defenders) {
-        d.height = d.width * (imgBlock.naturalHeight / imgBlock.naturalWidth);
-    }
-};
+            { x: 105, y: 205, width: BLOCK_W, height: BLOCK_H, speed: 2, dir: 1 },
+            { x: 235, y: 285, width: BLOCK_W, height: BLOCK_H, speed: 3, dir: -1 }
+        ];
 
         let ball = { x: 200, y: 460, radius: 15, vx: 0, vy: 0, isShot: false };
         let target = { x: 200, y: 40 };
@@ -558,6 +554,24 @@ imgBlock.onload = function () {
             }
         }
 
+        function drawAsset(img, x, y, w, h) {
+            // 將圖片以 cover 方式畫入指定框，保持比例但自動裁走多餘邊位，
+            // 適合用於有透明/留白邊位嘅角色 PNG。
+            const imgRatio = img.naturalWidth / img.naturalHeight;
+            const boxRatio = w / h;
+            let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
+
+            if (imgRatio > boxRatio) {
+                sw = img.naturalHeight * boxRatio;
+                sx = (img.naturalWidth - sw) / 2;
+            } else {
+                sh = img.naturalWidth / boxRatio;
+                sy = (img.naturalHeight - sh) / 2;
+            }
+
+            ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+        }
+
         function draw() {
             // Canvas 內嘅球場背景：使用 field.jpg
             // 注意：bg.jpg 係 body / gameplay 外圍背景；field.jpg 先係球場畫布背景
@@ -581,7 +595,7 @@ imgBlock.onload = function () {
 
             for (let d of defenders) {
                 if (imgBlock.complete && imgBlock.naturalWidth !== 0) {
-                    ctx.drawImage(imgBlock, d.x, d.y, d.width, d.height);
+                    drawAsset(imgBlock, d.x, d.y, d.width, d.height);
                 } else {
                     ctx.fillStyle = "#FF9800"; 
                     ctx.fillRect(d.x, d.y, d.width, d.height);
@@ -593,7 +607,7 @@ imgBlock.onload = function () {
             }
 
             if (imgGoalie.complete && imgGoalie.naturalWidth !== 0) {
-                ctx.drawImage(imgGoalie, goalie.x, goalie.y, goalie.width, goalie.height);
+                drawAsset(imgGoalie, goalie.x, goalie.y, goalie.width, goalie.height);
             } else {
                 ctx.fillStyle = "white"; 
                 ctx.font = "40px sans-serif";
